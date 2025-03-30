@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大数据智能团队邀请函</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Arial', sans-serif;
+            touch-action: manipulation;
+        }
+
+        canvas {
+            display: block;
+            cursor: pointer;
+        }
+
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            z-index: 1000;
+        }
+
+        #terminal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            overflow: auto;
+            z-index: 999;
+            display: none;
+        }
+
+        #editor-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 70%;
+            z-index: 100;
+            display: none;
+            background: #1e1e1e;
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        #close-editor {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 101;
+        }
+
+        #hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 10;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .click-feedback {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 9999;
+            animation: clickEffect 0.6s ease-out;
+        }
+
+        @keyframes clickEffect {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(3);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading">加载中，请稍候...</div>
+    <div id="terminal"></div>
+    <div id="editor-container">
+        <button id="close-editor">关闭编辑器</button>
+    </div>
+
+    <!-- 使用固定版本的Three.js和相关组件 -->
+    <script src="https://registry.npmmirror.com/three/0.132.2/files/build/three.min.js"></script>
+    <script src="https://registry.npmmirror.com/three/0.132.2/files/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://registry.npmmirror.com/three/0.132.2/files/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://registry.npmmirror.com/three/0.132.2/files/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://registry.npmmirror.com/howler/2.2.3/files/dist/howler.min.js"></script>
+
+    <!-- 使用Monaco Editor的正确加载方式 -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main"
+        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.min.css">
+    <script>
+        var require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' } };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.nls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.js"></script>
+
+    <script>
+        // 1. 读取URL参数
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                name: decodeURIComponent(urlParams.get('name') || '新成员'),
+                position: decodeURIComponent(urlParams.get('position') || '团队成员'),
+                id: decodeURIComponent(urlParams.get('id') || '000')
+            };
+        }
+        const studentData = getUrlParams();
+        let codeLines = []; // 漂浮的代码行
+
+        function createCodeLines() {
+            const loader = new THREE.FontLoader();
+            loader.load("Orbitron_Regular.json", function (font) {
+                const codeSnippets = [
+                    // JavaScript
+                    'function welcome() {', 'console.log("Hello World");', 'let team = "Awesome";',
+                    'return success;', 'if (true) { render(); }', 'for (let i = 0; i < 10; i++) {',
+                    'while (running) { update(); }', 'const PI = 3.14159;', 'let data = fetchData();',
+                    'document.getElementById("app").innerHTML = "Loaded";',
+
+                    // Python
+                    'def hello():', '    print("Hello, world!")', 'for i in range(10):', '    print(i)',
+                    'import numpy as np', 'arr = np.zeros((3,3))', 'with open("file.txt", "r") as f:', '    content = f.read()',
+                    'class Car:', '    def __init__(self, model):', '        self.model = model',
+
+                    // Java
+                    'public class Main {', '    public static void main(String[] args) {', '        System.out.println("Hello World");', '    }', '}',
+                    'for(int i = 0; i < 10; i++) {', '    System.out.println(i);', '}',
+                    'int[] arr = new int[10];', 'Arrays.fill(arr, 5);',
+
+                    // C++
+                    '#include <iostream>', 'using namespace std;', 'int main() {', '    cout &lt;&lt; "Hello, World!" &lt;&lt; endl;', '    return 0;', '}',
+                    'vector<int> v = {1, 2, 3, 4};', 'for(auto x : v) {', '    cout &lt;&lt; x &lt;&lt; " ";', '}',
+
+                    // Rust
+                    'fn main() {', '    println!("Hello, World!");', '}', 'let numbers = vec![1, 2, 3, 4];',
+                    'for num in &numbers {', '    println!("{}", num);', '}',
+
+                    // Go
+                    'package main', 'import "fmt"', 'func main() {', '    fmt.Println("Hello, World!")', '}',
+                    'var arr = []int{1, 2, 3, 4}', 'for _, num := range arr {', '    fmt.Println(num)', '}',
+                ];
+
+
+                for (let i = 0; i < 200; i++) {
+                    const textGeometry = new THREE.TextGeometry(codeSnippets[i % codeSnippets.length], {
+                        font: font,
+                        size: 0.3,
+                        height: 0.01
+                    });
+                    const textMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        transparent: true,
+                        opacity: 0.5
+                    });
+                    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                    textMesh.position.set(
+                        (Math.random() - 0.5) * 100,
+                        (Math.random() - 0.5) * 50,
+                        (Math.random() - 0.5) * 100
+                    );
+                    textMesh.userData = { velocity: (Math.random() - 0.5) * 0.02 };
+                    scene.add(textMesh);
+                    codeLines.push(textMesh);
+                }
+            });
+        }
+
+        // 2. 音效系统
+        const sounds = {
+            pop: new Howl({ src: ['https://assets.codepen.io/21542/howler-poppin.mp3'] }),
+            success: new Howl({ src: ['https://assets.codepen.io/21542/howler-success.mp3'] }),
+            type: new Howl({ src: ['https://assets.codepen.io/21542/typewriter-key-1.mp3'], volume: 0.3 }),
+            boom: new Howl({ src: ['https://assets.codepen.io/21542/howler-boom.mp3'] })
+        };
+
+        // 3. Three.js场景初始化
+        let scene, camera, renderer, controls;
+        let envelope, letter, particleSystem, techIcons = [];
+        let isAnimating = true;
+        let mouseX = 0, mouseY = 0;
+        let windowHalfX = window.innerWidth / 2;
+        let windowHalfY = window.innerHeight / 2;
+
+        // 技术栈图标
+        const techStack = [
+            { name: 'JavaScript', color: 0xF7DF1E },
+            { name: 'Python', color: 0x3776AB },
+            { name: 'Three.js', color: 0x049EF4 },
+            { name: 'React', color: 0x61DAFB },
+            { name: 'Node.js', color: 0x339933 },
+            { name: 'Git', color: 0xF05032 }
+        ];
+
+        // 4. 主初始化函数
+        function init() {
+            showTerminalAnimation();
+            initScene();
+            initEvents();
+            animate();
+        }
+
+        // 5. 场景初始化
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+            camera.position.y = 10;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.enablePan = false; // 禁用拖动缩放
+            controls.mouseButtons = {
+                LEFT: null, // 左键仅旋转
+                MIDDLE: THREE.MOUSE.DOLLY, // 中键缩放
+                RIGHT: null // 禁用右键平移
+            };
+
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            createEnvelope();
+            createTechIcons();
+            createParticles();
+            createCodeLines(); // 添加漂浮的代码行
+        }
+
+        // 6. 创建信封和信件
+        function createEnvelope() {
+            const envelopeGeometry = new THREE.BoxGeometry(15, 9, 0.75);
+            const envelopeMaterial = new THREE.MeshPhongMaterial({
+                color: 0xC41E3A,
+                emissive: 0x000000,
+                specular: 0x111111,
+                shininess: 30
+            });
+            envelope = new THREE.Mesh(envelopeGeometry, envelopeMaterial);
+            envelope.position.y = 2;
+            scene.add(envelope);
+
+            const letterGeometry = new THREE.BoxGeometry(9, 5, 0.2);
+            const letterMaterial = new THREE.MeshPhongMaterial({
+                color: 0xF8F8F8,
+                side: THREE.DoubleSide
+            });
+            letter = new THREE.Mesh(letterGeometry, letterMaterial);
+            letter.position.y = 2;
+            letter.position.z = -0.5;
+            scene.add(letter);
+
+            const loader = new THREE.FontLoader();
+            loader.load('ZCOOL_KuHei_Regular.json', function (font) {
+                const createChineseText = (text, size, yPos, color) => {
+                    const textGeometry = new THREE.TextGeometry(text, {
+                        font: font,
+                        size: size,
+                        height: 0.05,
+                        curveSegments: 12
+                    });
+                    textGeometry.center();
+                    const textMaterial = new THREE.MeshPhongMaterial({ color: color });
+                    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                    textMesh.position.set(0, yPos, 0.11);
+                    return textMesh;
+                };
+
+                letter.add(createChineseText('欢迎入队', 0.8, 3.5, 0x333333));
+                letter.add(createChineseText(studentData.name, 0.6, 2, 0xC41E3A));
+                letter.add(createChineseText(studentData.position, 0.4, 1, 0x333333));
+                letter.add(createChineseText(`ID: ${studentData.id}`, 0.3, -1.5, 0x666666));
+            });
+        }
+
+        // 7. 创建技术栈图标
+        function createTechIcons() {
+            const radius = 15;
+            const iconGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+
+            techStack.forEach((tech, i) => {
+                const angle = (i / techStack.length) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+
+                const material = new THREE.MeshPhongMaterial({
+                    color: tech.color,
+                    emissive: tech.color,
+                    emissiveIntensity: 0.2
+                });
+
+                const icon = new THREE.Mesh(iconGeometry, material);
+                icon.position.set(x, 0, z);
+                icon.userData = { name: tech.name, originalPosition: { x, y: 0, z } };
+                scene.add(icon);
+                techIcons.push(icon);
+            });
+        }
+
+        // 8. 创建粒子系统
+        // 8. 创建粒子系统
+        function createParticles() {
+            const particleCount = 1000; // 增加粒子数量
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            const color = new THREE.Color();
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+
+                color.setHSL(Math.random(), 0.7, 0.5); // 多彩粒子
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particleSystem = new THREE.Points(particles, particleMaterial);
+            scene.add(particleSystem);
+        }
+
+
+        // 9. 事件初始化
+        function initEvents() {
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('mousemove', onDocumentMouseMove);
+            renderer.domElement.addEventListener('click', onDocumentClick, false);
+
+            document.getElementById('close-editor').addEventListener('click', function () {
+                document.getElementById('editor-container').style.display = 'none';
+                sounds.pop.play();
+            });
+        }
+
+        // 10. 显示终端动画
+        function showTerminalAnimation() {
+            const terminal = document.getElementById('terminal');
+            terminal.style.display = 'block';
+
+            const messages = [
+                "> 我们正在加载系统...",
+                "> 连接服务器...成功",
+                "> 身份验证...通过",
+                `> 欢迎，${studentData.name}`,
+                "> 加载入队信息...",
+                `> 职位：${studentData.position}`,
+                `> ID：${studentData.id}`,
+                "> 准备3D环境...",
+                "> 所有系统已准备好！",
+                "> 进入中..."
+            ];
+
+            let index = 0;
+
+            function typeNext() {
+                if (index >= messages.length) {
+                    setTimeout(() => {
+                        terminal.style.display = 'none';
+                        document.getElementById('loading').style.display = 'none';
+                        animateEnvelopeOpen();
+                    }, 1000);
+                    return;
+                }
+
+                const message = messages[index];
+                terminal.innerHTML += `<div>${message}</div>`;
+                terminal.scrollTop = terminal.scrollHeight;
+                sounds.type.play();
+                index++;
+
+                setTimeout(typeNext, 500 + Math.random() * 500);
+            }
+
+            typeNext();
+        }
+
+        // 11. 信封打开动画
+        function animateEnvelopeOpen() {
+            let progress = 0;
+            const duration = 2;
+
+            function update() {
+                progress += 0.016 / duration;
+
+                envelope.rotation.x = -Math.PI / 2 * progress;
+                envelope.position.y = 2 - 3 * progress;
+
+                if (progress > 0.5) {
+                    const letterProgress = (progress - 0.5) * 2;
+                    letter.position.z = -0.5 + 10 * letterProgress;
+                    letter.rotation.x = Math.PI / 4 * (1 - letterProgress);
+                }
+
+                if (progress > 0.7) {
+                    const particlePositions = particleSystem.geometry.attributes.position.array;
+                    const center = new THREE.Vector3(0, 5, 0);
+
+                    for (let i = 0; i < particlePositions.length; i += 3) {
+                        const particle = new THREE.Vector3(
+                            particlePositions[i],
+                            particlePositions[i + 1],
+                            particlePositions[i + 2]
+                        );
+                        particle.sub(center).multiplyScalar(0.95).add(center);
+                        particlePositions[i] = particle.x;
+                        particlePositions[i + 1] = particle.y;
+                        particlePositions[i + 2] = particle.z;
+                    }
+                    particleSystem.geometry.attributes.position.needsUpdate = true;
+                }
+
+                techIcons.forEach(icon => {
+                    const distance = new THREE.Vector3().subVectors(
+                        icon.position,
+                        new THREE.Vector3(0, 5, 0)
+                    ).length();
+
+                    if (distance > 5) {
+                        icon.position.lerp(
+                            new THREE.Vector3(
+                                icon.userData.originalPosition.x * 0.5,
+                                5,
+                                icon.userData.originalPosition.z * 0.5
+                            ),
+                            0.05
+                        );
+                    }
+                });
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    isAnimating = false;
+                    setTimeout(() => {
+                        document.getElementById('hint').style.opacity = 1;
+                    }, 1000);
+                }
+            }
+
+            update();
+            sounds.success.play();
+        }
+
+        // 12. 显示代码编辑器
+        function showCodeEditor() {
+            const editorContainer = document.getElementById('editor-container');
+            editorContainer.style.display = 'block';
+
+            require(['vs/editor/editor.main'], function () {
+                const editor = monaco.editor.create(editorContainer, {
+                    value: `// 欢迎加入${studentData.name}!\n// 这是为你定制的代码空间\n\nfunction welcome() {\n  const team = "${studentData.position}";\n  const message = \`恭喜你被选为\${team}！\\n\\n` +
+                        `我们期待与你一起:\\n- 开发酷炫的项目\\n- 学习前沿技术\\n- 参加竞赛和活动\\n\\n` +
+                        `让我们一起创造精彩！\`;\n  \n  return message;\n}\n\nconsole.log(welcome());`,
+                    language: 'javascript',
+                    theme: 'vs-dark',
+                    automaticLayout: true,
+                    fontSize: 14,
+                    minimap: { enabled: false }
+                });
+
+                const runButton = document.createElement('button');
+                runButton.textContent = '运行代码';
+                runButton.style.position = 'absolute';
+                runButton.style.bottom = '10px';
+                runButton.style.left = '10px';
+                runButton.style.padding = '5px 10px';
+                runButton.style.backgroundColor = '#333';
+                runButton.style.color = 'white';
+                runButton.style.border = 'none';
+                runButton.style.cursor = 'pointer';
+                runButton.style.zIndex = '102';
+
+                runButton.addEventListener('click', function () {
+                    try {
+                        const code = editor.getValue();
+                        const result = new Function(code)();
+                        alert(result);
+                        sounds.pop.play();
+                    } catch (e) {
+                        alert('执行出错: ' + e.message);
+                    }
+                });
+
+                editorContainer.appendChild(runButton);
+            });
+        }
+
+        // 13. 其他辅助函数
+        function onWindowResize() {
+            windowHalfX = window.innerWidth / 2;
+            windowHalfY = window.innerHeight / 2;
+
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onDocumentMouseMove(event) {
+            mouseX = (event.clientX - windowHalfX) / 100;
+            mouseY = (event.clientY - windowHalfY) / 100;
+        }
+
+        function onDocumentClick(event) {
+            createClickFeedback(event.clientX, event.clientY);
+
+            if (document.getElementById('editor-container').style.display === 'block') {
+                return;
+            }
+
+            createFireworks();
+            sounds.success.play();
+
+            if (Math.random() > 0.7) {
+                showCodeEditor();
+            }
+        }
+
+        function createClickFeedback(x, y) {
+            const feedback = document.createElement('div');
+            feedback.className = 'click-feedback';
+            feedback.style.left = `${x}px`;
+            feedback.style.top = `${y}px`;
+            document.body.appendChild(feedback);
+
+            setTimeout(() => {
+                feedback.remove();
+            }, 600);
+        }
+
+        function createFireworks() {
+            const fireworkCount = 30;
+            const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+
+            for (let i = 0; i < fireworkCount; i++) {
+                const particles = new THREE.BufferGeometry();
+                const particleCount = 100;
+                const positions = new Float32Array(particleCount * 3);
+                const color = new THREE.Color(colors[Math.floor(Math.random() * colors.length)]);
+
+                for (let j = 0; j < particleCount; j++) {
+                    positions[j * 3] = (Math.random() - 0.5) * 2;
+                    positions[j * 3 + 1] = (Math.random() - 0.5) * 2;
+                    positions[j * 3 + 2] = (Math.random() - 0.5) * 2;
+                }
+
+                particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+                const material = new THREE.PointsMaterial({
+                    size: 0.1,
+                    color: color,
+                    transparent: true,
+                    opacity: 1,
+                    blending: THREE.AdditiveBlending
+                });
+
+                const firework = new THREE.Points(particles, material);
+                firework.position.set(
+                    (Math.random() - 0.5) * 20,
+                    Math.random() * 10,
+                    (Math.random() - 0.5) * 20
+                );
+
+                scene.add(firework);
+
+                const speed = 0.1 + Math.random() * 0.2;
+                const angle = Math.random() * Math.PI * 2;
+
+                function animateFirework() {
+                    requestAnimationFrame(animateFirework);
+
+                    for (let j = 0; j < particleCount; j++) {
+                        positions[j * 3] += Math.cos(angle) * speed;
+                        positions[j * 3 + 1] += speed;
+                        positions[j * 3 + 2] += Math.sin(angle) * speed;
+                    }
+
+                    particles.attributes.position.needsUpdate = true;
+                    material.opacity -= 0.01;
+
+                    if (material.opacity <= 0) {
+                        scene.remove(firework);
+                    }
+                }
+
+                animateFirework();
+            }
+
+            sounds.boom.play();
+        }
+
+        // 14. 主动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+
+            controls.update();
+
+            if (!isAnimating) {
+                camera.position.x += (mouseX - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                const time = Date.now() * 0.001;
+                techIcons.forEach((icon, i) => {
+                    icon.position.y = 5 + Math.sin(time * 0.5 + i * 0.5) * 0.5;
+                    icon.rotation.y = time * 0.2 + i;
+                });
+
+                const particlePositions = particleSystem.geometry.attributes.position.array;
+                for (let i = 0; i < particlePositions.length; i += 3) {
+                    particlePositions[i + 1] += Math.sin(time + i * 0.01) * 0.01;
+                }
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+
+                // 漂浮代码行动画
+                codeLines.forEach(line => {
+                    line.position.y += line.userData.velocity;
+                    if (line.position.y > 20) line.position.y = -20;
+                    if (line.position.y < -20) line.position.y = 20;
+                });
+            }
+
+            renderer.render(scene, camera);
+        }
+        // function animate() {
+        //     requestAnimationFrame(animate);
+
+        //     controls.update();
+
+        //     if (!isAnimating) {
+        //         camera.position.x += (mouseX - camera.position.x) * 0.05;
+        //         camera.position.y += (-mouseY - camera.position.y) * 0.05;
+        //         camera.lookAt(scene.position);
+
+        //         const time = Date.now() * 0.001;
+        //         techIcons.forEach((icon, i) => {
+        //             icon.position.y = 5 + Math.sin(time * 0.5 + i * 0.5) * 0.5;
+        //             icon.rotation.y = time * 0.2 + i;
+        //         });
+
+        //         const particlePositions = particleSystem.geometry.attributes.position.array;
+        //         for (let i = 0; i < particlePositions.length; i += 3) {
+        //             particlePositions[i + 1] += Math.sin(time + i * 0.01) * 0.01;
+        //         }
+        //         particleSystem.geometry.attributes.position.needsUpdate = true;
+        //     }
+
+        //     renderer.render(scene, camera);
+        // }
+
+        // 启动应用
+        init();
+    </script>
+</body>
+
+</html>
