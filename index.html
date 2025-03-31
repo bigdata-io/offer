@@ -117,38 +117,49 @@
 </head>
 
 <body>
-    <div id="loading">加载中，请稍候...</div>
+    <div id="loading">Offer送达中，请稍候...</div>
     <div id="terminal"></div>
     <div id="editor-container">
         <button id="close-editor">关闭编辑器</button>
     </div>
 
     <!-- 使用固定版本的Three.js和相关组件 -->
-    <script src="https://registry.npmmirror.com/three/0.132.2/files/build/three.min.js"></script>
-    <script src="https://registry.npmmirror.com/three/0.132.2/files/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://registry.npmmirror.com/three/0.132.2/files/examples/js/loaders/FontLoader.js"></script>
-    <script src="https://registry.npmmirror.com/three/0.132.2/files/examples/js/geometries/TextGeometry.js"></script>
-    <script src="https://registry.npmmirror.com/howler/2.2.3/files/dist/howler.min.js"></script>
+    <script src="./libs/three/three.min.js"></script>
+    <script src="./libs/three/OrbitControls.js"></script>
+    <script src="./libs/three/FontLoader.js"></script>
+    <script src="./libs/three/TextGeometry.js"></script>
+    <script src="./libs/howler/howler.min.js"></script>
 
-    <!-- 使用Monaco Editor的正确加载方式 -->
-    <link rel="stylesheet" data-name="vs/editor/editor.main"
-        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.min.css">
+
+
+
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="./libs/monaco/editor.main.min.css">
     <script>
-        var require = { paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs' } };
+        var require = { paths: { vs: './libs/monaco/' } };
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/loader.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.nls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.36.1/min/vs/editor/editor.main.js"></script>
+    <script src="./libs/monaco/loader.min.js"></script>
+    <script src="./libs/monaco/editor.main.nls.js"></script>
+    <script src="./libs/monaco/editor.main.js"></script>
+
 
     <script>
+        const students = [
+            "周尚毅",
+            "冯兴同",
+            "刘继昌",
+            "杨灿灿",
+            "刘宁",
+            "白铃潇",
+            "张祥",
+            "果核",
+            "OuterCyrex",
+        ];
+
         // 1. 读取URL参数
         function getUrlParams() {
             const urlParams = new URLSearchParams(window.location.search);
-            return {
-                name: decodeURIComponent(urlParams.get('name') || '新成员'),
-                position: decodeURIComponent(urlParams.get('position') || '团队成员'),
-                id: decodeURIComponent(urlParams.get('id') || '000')
-            };
+            const id = urlParams.get('id')
+            return students[id];
         }
         const studentData = getUrlParams();
         let codeLines = []; // 漂浮的代码行
@@ -174,8 +185,8 @@
                     'int[] arr = new int[10];', 'Arrays.fill(arr, 5);',
 
                     // C++
-                    '#include <iostream>', 'using namespace std;', 'int main() {', '    cout &lt;&lt; "Hello, World!" &lt;&lt; endl;', '    return 0;', '}',
-                    'vector<int> v = {1, 2, 3, 4};', 'for(auto x : v) {', '    cout &lt;&lt; x &lt;&lt; " ";', '}',
+                    '#include <iostream>', 'using namespace std;', 'int main() {', '    cout << "Hello, World!" << endl;', '    return 0;', '}',
+                    'vector<int> v = {1, 2, 3, 4};', 'for(auto x : v) {', '    cout << x << " ";', '}',
 
                     // Rust
                     'fn main() {', '    println!("Hello, World!");', '}', 'let numbers = vec![1, 2, 3, 4];',
@@ -210,14 +221,6 @@
                 }
             });
         }
-
-        // 2. 音效系统
-        const sounds = {
-            pop: new Howl({ src: ['https://assets.codepen.io/21542/howler-poppin.mp3'] }),
-            success: new Howl({ src: ['https://assets.codepen.io/21542/howler-success.mp3'] }),
-            type: new Howl({ src: ['https://assets.codepen.io/21542/typewriter-key-1.mp3'], volume: 0.3 }),
-            boom: new Howl({ src: ['https://assets.codepen.io/21542/howler-boom.mp3'] })
-        };
 
         // 3. Three.js场景初始化
         let scene, camera, renderer, controls;
@@ -285,50 +288,101 @@
         }
 
         // 6. 创建信封和信件
+        // 6. 创建信封和信件
         function createEnvelope() {
-            const envelopeGeometry = new THREE.BoxGeometry(15, 9, 0.75);
+            // 增大信封的尺寸
+            const envelopeGeometry = new THREE.BoxGeometry(22, 12, 1);  // 增大信封的宽度和高度
             const envelopeMaterial = new THREE.MeshPhongMaterial({
-                color: 0xC41E3A,
+                color: 0xC41E3A, // 信封的颜色
                 emissive: 0x000000,
                 specular: 0x111111,
                 shininess: 30
             });
             envelope = new THREE.Mesh(envelopeGeometry, envelopeMaterial);
-            envelope.position.y = 2;
+            envelope.position.y = 4; // 适当调整信封位置
             scene.add(envelope);
 
-            const letterGeometry = new THREE.BoxGeometry(9, 5, 0.2);
+            // 增大信纸的尺寸
+            const letterGeometry = new THREE.BoxGeometry(20, 7, 0.2);  // 增大信纸的宽度和高度
             const letterMaterial = new THREE.MeshPhongMaterial({
-                color: 0xF8F8F8,
+                color: 0xF8F8F8,  // 信纸颜色
                 side: THREE.DoubleSide
             });
             letter = new THREE.Mesh(letterGeometry, letterMaterial);
-            letter.position.y = 2;
+            letter.position.y = 4;  // 信纸的位置
             letter.position.z = -0.5;
             scene.add(letter);
 
             const loader = new THREE.FontLoader();
             loader.load('ZCOOL_KuHei_Regular.json', function (font) {
-                const createChineseText = (text, size, yPos, color) => {
+                // 创建渐变色文字的函数
+                const createChineseText = (text, size, yPos, color1, color2, color3) => {
                     const textGeometry = new THREE.TextGeometry(text, {
                         font: font,
                         size: size,
                         height: 0.05,
                         curveSegments: 12
                     });
-                    textGeometry.center();
-                    const textMaterial = new THREE.MeshPhongMaterial({ color: color });
+                    textGeometry.center(); // 文字居中
+
+                    // 使用 ShaderMaterial 创建渐变色效果
+                    let textMaterial = new THREE.ShaderMaterial({
+                        vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                        fragmentShader: `
+                    uniform vec3 color1;
+                    uniform vec3 color2;
+                    uniform vec3 color3;
+                    varying vec2 vUv;
+                    void main() {
+                        vec3 color = mix(color1, color2, vUv.y);
+                        color = mix(color, color3, vUv.x);
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `,
+                        uniforms: {
+                            color1: { value: new THREE.Color(0x1E3A8A) }, // 蓝色 1
+                            color2: { value: new THREE.Color(0x3B82F6) }, // 蓝色 2
+                            color3: { value: new THREE.Color(0x60A5FA) }  // 蓝色 3
+                        },
+                        side: THREE.DoubleSide,
+                        flatShading: true
+                    });
+
+                    if (color1 === color2 === color3) {
+                        textMaterial = new THREE.MeshPhongMaterial({ color: color1 });
+                        console.log('color1')
+                    }
+
                     const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-                    textMesh.position.set(0, yPos, 0.11);
+                    textMesh.position.set(0, yPos, 0.11); // 设置文字位置
                     return textMesh;
                 };
 
-                letter.add(createChineseText('欢迎入队', 0.8, 3.5, 0x333333));
-                letter.add(createChineseText(studentData.name, 0.6, 2, 0xC41E3A));
-                letter.add(createChineseText(studentData.position, 0.4, 1, 0x333333));
-                letter.add(createChineseText(`ID: ${studentData.id}`, 0.3, -1.5, 0x666666));
+                // 在信纸上添加渐变色标题
+                // 在信纸上添加渐变色标题
+                letter.add(createChineseText('欢迎加入大数据家庭', 2, 4.5, 0x1E3A8A, 0x3B82F6, 0x60A5FA)); // 增大标题字体
+
+                // 添加空行
+                letter.add(createChineseText('         ', 2, 3.5, 0x1E3A8A, 0x3B82F6, 0x60A5FA)); // 增大标题字体
+
+                // 添加学生名字，yPos逐步调整来模拟换行
+                letter.add(createChineseText('亲爱的 ' + studentData + ' 同学', 1.2, 2.5, 0xC41E3A, 0xC41E3A, 0xC41E3A)); // 学生名字
+
+                // 添加欢迎语，yPos逐步调整来模拟换行
+                letter.add(createChineseText("我们期待你的加入，", 1, 0.5, 0x333333, 0x333333, 0x333333)); // 欢迎语的第一行
+                letter.add(createChineseText("一起探索编程世界的无限可能!", 1, -0.5, 0x333333, 0x333333, 0x333333)); // 欢迎语的第二行
+                letter.add(createChineseText("   2025年3月31日", 0.7, -2.5, 0x333333, 0x333333, 0x333333)); // 日期，使用单一颜色（灰色）
+
             });
         }
+
+
 
         // 7. 创建技术栈图标
         function createTechIcons() {
@@ -354,7 +408,6 @@
             });
         }
 
-        // 8. 创建粒子系统
         // 8. 创建粒子系统
         function createParticles() {
             const particleCount = 1000; // 增加粒子数量
@@ -436,7 +489,6 @@
                 const message = messages[index];
                 terminal.innerHTML += `<div>${message}</div>`;
                 terminal.scrollTop = terminal.scrollHeight;
-                sounds.type.play();
                 index++;
 
                 setTimeout(typeNext, 500 + Math.random() * 500);
@@ -509,7 +561,6 @@
             }
 
             update();
-            sounds.success.play();
         }
 
         // 12. 显示代码编辑器
@@ -692,31 +743,7 @@
 
             renderer.render(scene, camera);
         }
-        // function animate() {
-        //     requestAnimationFrame(animate);
 
-        //     controls.update();
-
-        //     if (!isAnimating) {
-        //         camera.position.x += (mouseX - camera.position.x) * 0.05;
-        //         camera.position.y += (-mouseY - camera.position.y) * 0.05;
-        //         camera.lookAt(scene.position);
-
-        //         const time = Date.now() * 0.001;
-        //         techIcons.forEach((icon, i) => {
-        //             icon.position.y = 5 + Math.sin(time * 0.5 + i * 0.5) * 0.5;
-        //             icon.rotation.y = time * 0.2 + i;
-        //         });
-
-        //         const particlePositions = particleSystem.geometry.attributes.position.array;
-        //         for (let i = 0; i < particlePositions.length; i += 3) {
-        //             particlePositions[i + 1] += Math.sin(time + i * 0.01) * 0.01;
-        //         }
-        //         particleSystem.geometry.attributes.position.needsUpdate = true;
-        //     }
-
-        //     renderer.render(scene, camera);
-        // }
 
         // 启动应用
         init();
