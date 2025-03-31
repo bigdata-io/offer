@@ -156,9 +156,14 @@
         ];
 
         // 1. 读取URL参数
+        // function getUrlParams() {
+        //     const urlParams = new URLSearchParams(window.location.search);
+        //     const id = urlParams.get('id')
+        //     return students[id];
+        // }
         function getUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const id = urlParams.get('id')
+            const pathParts = window.location.pathname.split('/').filter(Boolean); // 拆分路径并去掉空字符串
+            const id = pathParts[0]; // 假设 ID 在路径的第一个位置
             return students[id];
         }
         const studentData = getUrlParams();
